@@ -1,23 +1,13 @@
-# Dependencies
-node_modules/
-client/node_modules/
-server/node_modules/
-
-# Environment variables - NEVER commit these
+# Local environment files
 .env
 .env.local
 .env.production
-client/.env
-client/.env.local
-server/.env
 
-# Build output
-client/dist/
+# Dependencies
+node_modules/
+
+# Optional static export folders
 dist/
-
-# Logs
-*.log
-npm-debug.log*
 
 # OS files
 .DS_Store

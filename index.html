@@ -2,12 +2,432 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mern-ydtaxi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YD TAXI | Chennai Intercity Taxi Booking</title>
+    <meta
+      name="description"
+      content="Premium Chennai intercity taxi booking with clear pricing, WhatsApp confirmation, and optional Google Maps-assisted distance lookup."
+    />
+    <meta name="theme-color" content="#f5b400" />
+    <meta name="keywords" content="Chennai taxi, intercity cab, sedan, SUV, Innova, one way taxi, round trip taxi" />
+    <meta property="og:title" content="YD TAXI | Chennai Intercity Taxi Booking" />
+    <meta
+      property="og:description"
+      content="Premium Chennai taxi booking with clear fare estimates and direct WhatsApp confirmation."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./assets/logo.svg" />
+    <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="page-glow glow-one" aria-hidden="true"></div>
+    <div class="page-glow glow-two" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="brand">
+        <img src="./assets/logo.svg" alt="YD TAXI logo" class="brand-logo" />
+        <div>
+          <p class="eyebrow">Premium Intercity Cabs</p>
+          <a href="#home" class="brand-name">YD TAXI</a>
+        </div>
+      </div>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span class="sr-only">Open menu</span>
+      </button>
+
+      <nav class="site-nav" id="site-nav">
+        <a href="#booking">Book</a>
+        <a href="#fleet">Fleet</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#routes">Routes</a>
+        <a href="#faq">FAQ</a>
+        <a href="#contact">Contact</a>
+        <a class="button button-ghost nav-call" href="#" data-phone-link>Call Now</a>
+      </nav>
+    </header>
+
+    <main id="home">
+      <section class="hero section">
+        <div class="hero-copy reveal">
+          <p class="hero-kicker">Ride Royal. Arrive Royal.</p>
+          <h1>Premium intercity rides with quick WhatsApp confirmation.</h1>
+          <p class="hero-text">
+            Book your trip in minutes with clear pricing, comfortable cab options, and a fast confirmation flow built
+            for Chennai and long-distance travel.
+          </p>
+
+          <div class="hero-actions">
+            <a class="button button-primary" href="#booking">Book Your Ride</a>
+            <a class="button button-secondary" href="#pricing">See Pricing</a>
+          </div>
+
+          <ul class="trust-list">
+            <li>Direct WhatsApp confirmation</li>
+            <li>Clear fare estimate before booking</li>
+            <li>Manual or assisted distance lookup</li>
+          </ul>
+        </div>
+
+        <aside class="booking-panel reveal" id="booking">
+          <div class="panel-topline">
+            <span class="panel-badge">Quick Booking</span>
+            <span class="maps-status" id="mapsStatus">Maps optional</span>
+          </div>
+
+          <form id="bookingForm" novalidate>
+            <div class="trip-toggle" role="radiogroup" aria-label="Trip type">
+              <button type="button" class="trip-toggle-button is-active" data-trip="oneway">One Way</button>
+              <button type="button" class="trip-toggle-button" data-trip="round">Round Trip</button>
+            </div>
+
+            <div class="field-grid two-col">
+              <div class="field">
+                <label for="pickup">Pickup location</label>
+                <input id="pickup" name="pickup" type="text" autocomplete="off" placeholder="Enter pickup point" />
+                <p class="field-error" data-error-for="pickup"></p>
+              </div>
+
+              <div class="field">
+                <label for="drop">Drop location</label>
+                <input id="drop" name="drop" type="text" autocomplete="off" placeholder="Enter destination" />
+                <p class="field-error" data-error-for="drop"></p>
+              </div>
+            </div>
+
+            <div class="field-grid two-col">
+              <div class="field">
+                <label for="distance">Distance (km)</label>
+                <input id="distance" name="distance" type="number" min="1" step="0.1" placeholder="Enter distance" />
+                <p class="field-help" id="distanceHelp">Enter the distance manually if route lookup is unavailable.</p>
+                <p class="field-error" data-error-for="distance"></p>
+              </div>
+
+              <div class="field">
+                <label for="cabType">Cab type</label>
+                <select id="cabType" name="cabType">
+                  <option value="sedan">Sedan</option>
+                  <option value="etios">Etios</option>
+                  <option value="suv">SUV</option>
+                  <option value="innova">Innova</option>
+                </select>
+                <p class="field-help" id="cabCapacityText">Seats up to 4 passengers.</p>
+              </div>
+            </div>
+
+            <div class="field-grid two-col">
+              <div class="field" data-trip-mode="oneway">
+                <label for="date">Travel date</label>
+                <input id="date" name="date" type="date" />
+                <p class="field-error" data-error-for="date"></p>
+              </div>
+
+              <div class="field" data-trip-mode="oneway">
+                <label for="time">Pickup time</label>
+                <input id="time" name="time" type="time" />
+                <p class="field-error" data-error-for="time"></p>
+              </div>
+
+              <div class="field is-hidden" data-trip-mode="round">
+                <label for="startDate">Start date</label>
+                <input id="startDate" name="startDate" type="date" />
+                <p class="field-error" data-error-for="startDate"></p>
+              </div>
+
+              <div class="field is-hidden" data-trip-mode="round">
+                <label for="startTime">Start time</label>
+                <input id="startTime" name="startTime" type="time" />
+                <p class="field-error" data-error-for="startTime"></p>
+              </div>
+
+              <div class="field is-hidden" data-trip-mode="round">
+                <label for="returnDate">Return date</label>
+                <input id="returnDate" name="returnDate" type="date" />
+                <p class="field-error" data-error-for="returnDate"></p>
+              </div>
+
+              <div class="field is-hidden" data-trip-mode="round">
+                <label for="returnTime">Return time</label>
+                <input id="returnTime" name="returnTime" type="time" />
+                <p class="field-error" data-error-for="returnTime"></p>
+              </div>
+            </div>
+
+            <div class="field-grid two-col">
+              <div class="field">
+                <label for="name">Customer name</label>
+                <input id="name" name="name" type="text" placeholder="Enter your name" />
+                <p class="field-error" data-error-for="name"></p>
+              </div>
+
+              <div class="field">
+                <label for="mobile">Mobile number</label>
+                <div class="phone-group">
+                  <select id="countryCode" name="countryCode" aria-label="Country code">
+                    <option value="+91">+91</option>
+                    <option value="+1">+1</option>
+                    <option value="+44">+44</option>
+                    <option value="+65">+65</option>
+                    <option value="+971">+971</option>
+                  </select>
+                  <input id="mobile" name="mobile" type="tel" inputmode="numeric" placeholder="Enter mobile number" />
+                </div>
+                <p class="field-error" data-error-for="mobile"></p>
+              </div>
+            </div>
+
+            <div class="field-grid two-col">
+              <div class="field">
+                <label for="passengers">Passengers</label>
+                <input id="passengers" name="passengers" type="number" min="1" max="4" placeholder="Optional" />
+                <p class="field-error" data-error-for="passengers"></p>
+              </div>
+
+              <div class="field">
+                <label for="luggage">Luggage</label>
+                <select id="luggage" name="luggage">
+                  <option value="">Select luggage size</option>
+                  <option value="Small">Small</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Large">Large</option>
+                  <option value="Extra Large">Extra Large</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="notes">Additional notes</label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows="4"
+                placeholder="Flight number, pickup landmark, child seat request, or anything else"
+              ></textarea>
+            </div>
+
+            <div class="booking-actions">
+              <button type="button" class="button button-secondary" id="estimateButton">Calculate Fare</button>
+              <button type="submit" class="button button-whatsapp" id="whatsAppButton">
+                <svg class="button-icon" viewBox="0 0 32 32" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M16.002 0C7.164 0 0 7.163 0 16c0 2.828.738 5.482 2.03 7.784L.697 30.464l6.848-1.797A15.923 15.923 0 0 0 16.002 32C24.84 32 32 24.837 32 16S24.84 0 16.002 0zm9.38 22.772c-.392.988-1.948 1.81-3.184 2.045-.838.157-1.932.283-5.612-1.208-4.714-1.906-7.755-6.65-7.99-6.955-.228-.305-1.905-2.535-1.905-4.838 0-2.304 1.206-3.438 1.635-3.905.427-.466.933-.583 1.244-.583.312 0 .622.001.896.015.286.014.668-.109 1.046.795.39.934 1.332 3.244 1.447 3.48.114.235.19.51.038.816-.15.305-.227.496-.453.762-.227.266-.476.595-.68.798-.227.233-.463.484-.2.95.263.46 1.17 1.93 2.513 3.126 1.73 1.54 3.187 2.016 3.638 2.245.452.23.714.192.977-.115.263-.307 1.13-1.317 1.432-1.768.302-.452.604-.376.016.874.316 1.25.316 2.323-.076 3.31z"
+                  />
+                </svg>
+                <span>Send on WhatsApp</span>
+              </button>
+            </div>
+
+            <div class="status-banner" id="statusBanner" aria-live="polite"></div>
+          </form>
+
+          <section class="fare-card" id="fareSummary" aria-live="polite">
+            <div class="fare-card-empty">
+              <p class="fare-title">Fare estimate</p>
+              <p>Your fare summary will appear here after validation.</p>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <section class="section fleet" id="fleet">
+        <div class="section-heading reveal">
+          <p class="section-kicker">Fleet</p>
+          <h2>Vehicle options for solo rides, families, and group travel.</h2>
+        </div>
+
+        <div class="fleet-grid">
+          <article class="info-card reveal">
+            <p class="card-pill">Sedan</p>
+            <h3>Everyday comfort</h3>
+            <p>Best for city-to-city rides with smooth seating for up to 4 passengers.</p>
+            <ul>
+              <li>One way: Rs 14/km</li>
+              <li>Round trip: Rs 13/km</li>
+              <li>Seats: 4</li>
+            </ul>
+          </article>
+
+          <article class="info-card reveal">
+            <p class="card-pill">Etios</p>
+            <h3>Reliable and roomy</h3>
+            <p>Efficient intercity option with balanced comfort, luggage space, and value.</p>
+            <ul>
+              <li>One way: Rs 14/km</li>
+              <li>Round trip: Rs 13/km</li>
+              <li>Seats: 4</li>
+            </ul>
+          </article>
+
+          <article class="info-card reveal">
+            <p class="card-pill">SUV</p>
+            <h3>Extra space for long rides</h3>
+            <p>For families or airport transfers where you need more room and comfort.</p>
+            <ul>
+              <li>One way: Rs 19/km</li>
+              <li>Round trip: Rs 18/km</li>
+              <li>Seats: 5</li>
+            </ul>
+          </article>
+
+          <article class="info-card reveal">
+            <p class="card-pill">Innova</p>
+            <h3>Group-ready travel</h3>
+            <p>Ideal for larger groups, pilgrimage travel, and multi-day routes.</p>
+            <ul>
+              <li>One way: Rs 20/km</li>
+              <li>Round trip: Rs 19/km</li>
+              <li>Seats: 8</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section pricing" id="pricing">
+        <div class="section-heading reveal">
+          <p class="section-kicker">Pricing</p>
+          <h2>Transparent per-km rates with the same business rules kept in the calculator.</h2>
+        </div>
+
+        <div class="pricing-grid">
+          <article class="pricing-card reveal">
+            <h3>One Way</h3>
+            <p class="pricing-subtitle">Minimum chargeable distance: 130 km</p>
+            <ul>
+              <li>Sedan: Rs 14/km</li>
+              <li>Etios: Rs 14/km</li>
+              <li>SUV: Rs 19/km</li>
+              <li>Innova: Rs 20/km</li>
+              <li>Driver bata: Rs 400</li>
+            </ul>
+          </article>
+
+          <article class="pricing-card reveal">
+            <h3>Round Trip</h3>
+            <p class="pricing-subtitle">Minimum chargeable distance: 250 km per day</p>
+            <ul>
+              <li>Sedan: Rs 13/km</li>
+              <li>Etios: Rs 13/km</li>
+              <li>SUV: Rs 18/km</li>
+              <li>Innova: Rs 19/km</li>
+              <li>Driver bata: Rs 400 per day</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section routes" id="routes">
+        <div class="section-heading reveal">
+          <p class="section-kicker">Popular Routes</p>
+          <h2>Common trips from Chennai that customers ask for most often.</h2>
+        </div>
+
+        <div class="route-chips reveal">
+          <span>Chennai to Pondicherry</span>
+          <span>Chennai to Bangalore</span>
+          <span>Chennai to Tirupati</span>
+          <span>Chennai to Mahabalipuram</span>
+          <span>Chennai to Trichy</span>
+          <span>Chennai to Madurai</span>
+          <span>Chennai to Coimbatore</span>
+          <span>Chennai to Salem</span>
+          <span>Chennai to Vellore</span>
+          <span>Chennai to Hosur</span>
+          <span>Chennai to Ooty</span>
+          <span>Chennai to Kodaikanal</span>
+        </div>
+      </section>
+
+      <section class="section faq" id="faq">
+        <div class="section-heading reveal">
+          <p class="section-kicker">FAQ</p>
+          <h2>Answers that matter before a ride gets confirmed.</h2>
+        </div>
+
+        <div class="faq-list reveal">
+          <details>
+            <summary>How do I confirm my booking?</summary>
+            <p>Fill in your trip details, review the fare estimate, and send the booking on WhatsApp for a quick confirmation.</p>
+          </details>
+          <details>
+            <summary>Can distance be calculated during booking?</summary>
+            <p>Yes. For many routes the trip distance can be checked while booking, and you can also enter the distance manually if needed.</p>
+          </details>
+          <details>
+            <summary>What if I do not know the exact distance?</summary>
+            <p>You can still share your pickup and drop points and we will help confirm the route details when replying on WhatsApp.</p>
+          </details>
+          <details>
+            <summary>Is the WhatsApp message detailed enough for confirmation?</summary>
+            <p>Yes. It includes booking reference, trip type, dates, route, cab type, passengers, notes, chargeable distance, and estimated fare.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="section contact" id="contact">
+        <div class="section-heading reveal">
+          <p class="section-kicker">Contact</p>
+          <h2>Reach out directly when a rider needs a quick answer.</h2>
+        </div>
+
+        <div class="contact-grid">
+          <a class="contact-card reveal" href="#" data-phone-link>
+            <p class="contact-label">Call</p>
+            <h3 data-phone-display>+91 90806 09081</h3>
+            <p>Fast confirmation for urgent bookings.</p>
+          </a>
+
+          <a class="contact-card reveal" href="#" data-whatsapp-link target="_blank" rel="noreferrer">
+            <p class="contact-label">WhatsApp</p>
+            <h3>Open Chat</h3>
+            <p>Use the same number for quotes and booking confirmations.</p>
+          </a>
+
+          <a class="contact-card reveal" href="#" data-email-link>
+            <p class="contact-label">Email</p>
+            <h3 data-email-display>support@ydtaxi.example</h3>
+            <p>For invoices, partnerships, and follow-up questions.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <p><strong>YD TAXI</strong> <span>Premium taxi service for Chennai and intercity travel.</span></p>
+        <p class="footer-note">Available for one-way rides, round trips, airport transfers, and outstation travel.</p>
+      </div>
+      <a class="button button-whatsapp footer-whatsapp" href="#" data-whatsapp-link target="_blank" rel="noreferrer">
+        <svg class="button-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M16.002 0C7.164 0 0 7.163 0 16c0 2.828.738 5.482 2.03 7.784L.697 30.464l6.848-1.797A15.923 15.923 0 0 0 16.002 32C24.84 32 32 24.837 32 16S24.84 0 16.002 0zm9.38 22.772c-.392.988-1.948 1.81-3.184 2.045-.838.157-1.932.283-5.612-1.208-4.714-1.906-7.755-6.65-7.99-6.955-.228-.305-1.905-2.535-1.905-4.838 0-2.304 1.206-3.438 1.635-3.905.427-.466.933-.583 1.244-.583.312 0 .622.001.896.015.286.014.668-.109 1.046.795.39.934 1.332 3.244 1.447 3.48.114.235.19.51.038.816-.15.305-.227.496-.453.762-.227.266-.476.595-.68.798-.227.233-.463.484-.2.95.263.46 1.17 1.93 2.513 3.126 1.73 1.54 3.187 2.016 3.638 2.245.452.23.714.192.977-.115.263-.307 1.13-1.317 1.432-1.768.302-.452.604-.376.016.874.316 1.25.316 2.323-.076 3.31z"
+          />
+        </svg>
+        <span>Chat on WhatsApp</span>
+      </a>
+    </footer>
+
+    <a class="floating-whatsapp" href="#" data-whatsapp-link target="_blank" rel="noreferrer" aria-label="Open WhatsApp chat">
+      <svg viewBox="0 0 32 32" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M16.002 0C7.164 0 0 7.163 0 16c0 2.828.738 5.482 2.03 7.784L.697 30.464l6.848-1.797A15.923 15.923 0 0 0 16.002 32C24.84 32 32 24.837 32 16S24.84 0 16.002 0zm9.38 22.772c-.392.988-1.948 1.81-3.184 2.045-.838.157-1.932.283-5.612-1.208-4.714-1.906-7.755-6.65-7.99-6.955-.228-.305-1.905-2.535-1.905-4.838 0-2.304 1.206-3.438 1.635-3.905.427-.466.933-.583 1.244-.583.312 0 .622.001.896.015.286.014.668-.109 1.046.795.39.934 1.332 3.244 1.447 3.48.114.235.19.51.038.816-.15.305-.227.496-.453.762-.227.266-.476.595-.68.798-.227.233-.463.484-.2.95.263.46 1.17 1.93 2.513 3.126 1.73 1.54 3.187 2.016 3.638 2.245.452.23.714.192.977-.115.263-.307 1.13-1.317 1.432-1.768.302-.452.604-.376.016.874.316 1.25.316 2.323-.076 3.31z"
+        />
+      </svg>
+    </a>
+
+    <script src="./js/config.js"></script>
+    <script src="./js/app.js"></script>
   </body>
 </html>

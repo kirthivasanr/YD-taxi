@@ -1,195 +1,63 @@
-# YD TAXI - MERN Stack
+# YD TAXI Static Site
 
-Full-stack taxi booking application with MongoDB, Express, React, and Node.js.
+This project has been simplified into a frontend-only taxi booking site using plain HTML, CSS, and JavaScript.
 
-## Features
+## What changed
 
--  Real-time fare estimation
--  Mobile-first responsive design
--  Modern dark + gold theme with animations
--  MongoDB booking storage
--  WhatsApp & Call CTAs
--  Vite for fast dev & HMR
+- Removed the Node, Express, MongoDB, and React app structure.
+- Kept the core booking flow: form validation, fare estimation, and direct WhatsApp booking.
+- Made Google Maps optional. If no API key is set, users can still book by entering distance manually.
+- Reduced the project to a small static structure that is easier to host on Netlify, GitHub Pages, Cloudflare Pages, or any basic static server.
 
-## Tech Stack
+## Project structure
 
-**Frontend:**
-- React 19 + Vite
-- CSS3 with custom animations
-- Intersection Observer API
-
-**Backend:**
-- Node.js + Express
-- MongoDB + Mongoose
-- CORS enabled
-
-## Prerequisites
-
-- Node.js v18+ and npm
-- MongoDB (local or Atlas)
-
-## Setup
-
-### 1. Install dependencies
-
-```powershell
-cd mern-ydtaxi
-npm run install-all
+```text
+assets/
+  logo.svg
+css/
+  styles.css
+js/
+  app.js
+  config.js
+index.html
+README.md
+netlify.toml
 ```
 
-This installs root, client, and server packages.
+## Configuration
 
-### 2. Configure environment
+Update `js/config.js` before deployment:
 
-**Server** - Create `server/.env`:
-
-```env
-MONGO_URI=mongodb://localhost:27017/ydtaxi
-PORT=5000
-NODE_ENV=development
-WHATSAPP_NUMBER=919080609081
-```
-
-**Client** - Create `client/.env`:
-
-```env
-VITE_API_URL=http://localhost:5000/api
-VITE_WHATSAPP_NUMBER=919080609081
-```
-
-**For mobile network access**, create `client/.env.local` with your network IP:
-
-```env
-VITE_API_URL=http://YOUR_LOCAL_IP:5000/api
-VITE_WHATSAPP_NUMBER=919080609081
-```
-
-For MongoDB Atlas, use your connection string:
-```
-MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/ydtaxi?retryWrites=true&w=majority
-```
-
-### 3. Start MongoDB (if using local)
-
-```powershell
-# If MongoDB is installed as a service
-net start MongoDB
-
-# Or start manually
-mongod --dbpath C:\data\db
-```
-
-### 4. Run the app
-
-```powershell
-npm run dev
-```
-
-This starts:
-- **Backend** on http://localhost:5000
-- **Frontend** on http://localhost:5173
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/bookings` | Create new booking |
-| GET | `/api/bookings` | Get all bookings |
-| GET | `/api/bookings/:id` | Get booking by ID |
-| PATCH | `/api/bookings/:id/status` | Update booking status |
-| DELETE | `/api/bookings/:id` | Delete booking |
-| GET | `/api/health` | API health check |
-
-## Project Structure
-
-```
-mern-ydtaxi/
- client/               # React frontend (Vite)
-    src/
-       App.jsx      # Main React component
-       App.css      # Styles
-       main.jsx     # Entry point
-    package.json
- server/               # Express backend
-    config/
-       db.js        # MongoDB connection
-    models/
-       Booking.js   # Mongoose schema
-    routes/
-       bookingRoutes.js
-    index.js         # Server entry
-    .env             # Environment vars
-    package.json
- package.json          # Root package with concurrently
- README.md
-```
-
-## Scripts
-
-```powershell
-# Install all dependencies
-npm run install-all
-
-# Run both client & server
-npm run dev
-
-# Run only client
-npm run client
-
-# Run only server
-npm run server
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
-## Production Build
-
-```powershell
-# Build optimized React app
-npm run build
-
-# The client/dist folder can be served by Express or any static host
-```
-
-To serve the built React app from Express:
-1. Build: `npm run build`
-2. Add to `server/index.js`:
 ```js
-import path from 'path';
-app.use(express.static(path.join(process.cwd(), '../client/dist')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(process.cwd(), '../client/dist/index.html'));
-});
+window.YD_TAXI_CONFIG = {
+  businessName: "YD TAXI",
+  baseCity: "Chennai",
+  siteUrl: "https://your-domain.example",
+  whatsappNumber: "919080609081",
+  phoneNumber: "+919080609081",
+  contactEmail: "support@ydtaxi.example",
+  googleMapsApiKey: "",
+  enableMapsAutocomplete: false
+};
 ```
 
-## Logo
+Notes:
 
-Place your logo at `client/public/logo.png` for it to appear in the header.
+- `whatsappNumber` should contain digits only.
+- `googleMapsApiKey` is optional.
+- If `enableMapsAutocomplete` is `true` and `googleMapsApiKey` is set, the site enables Google Places autocomplete and route distance lookup.
+- If Maps is not configured, the booking form still works with manual distance entry.
 
-## Customization
+## Hosting
 
-- **Rates**: Update `rates` object in `client/src/App.jsx`
-- **Phone/WhatsApp**: Change numbers in `Header` and `FloatingCTA` components
-- **Colors**: Edit CSS variables in `client/src/App.css` under `:root`
-- **API URL**: Set `VITE_API_URL` in client env or `.env`
+Upload the project as a static site.
 
-## Troubleshooting
+- Netlify: publish the repo root.
+- GitHub Pages: serve the root folder.
+- Any shared hosting: upload all files as-is.
 
-**MongoDB connection error:**
-- Ensure MongoDB is running
-- Check `MONGO_URI` in `server/.env`
+## Booking logic
 
-**CORS errors:**
-- Backend must run on port 5000 or update `VITE_API_URL`
-
-**Port conflicts:**
-- Change `PORT=5000` in `server/.env` for backend
-- Vite port can be changed in `client/vite.config.js`
-
-## License
-
- 2025 YD TAXI � All rights reserved.
+- One way: minimum 130 km chargeable distance plus `Rs 400` driver bata.
+- Round trip: minimum 250 km per day chargeable distance plus `Rs 400` driver bata per day.
+- WhatsApp message includes booking reference, route, schedule, cab type, passenger count, chargeable distance, and fare estimate.
