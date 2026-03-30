@@ -6,7 +6,7 @@
     whatsappNumber: "919080609081",
     phoneNumber: "+919080609081",
     contactEmail: "support@ydtaxi.example",
-    googleMapsApiKey: "AIzaSyCGXDFH4ZuXHD57bIo9t8a6HacWBGHhSuo",
+    googleMapsApiKey: "",
     enableMapsAutocomplete: false,
     ...(window.YD_TAXI_CONFIG || {})
   };
@@ -24,14 +24,60 @@
   };
 
   const driverBata = 400;
+  const rateLimitRules = {
+    suggestionLookup: {
+      key: "yd_taxi_rate_suggestion_lookup",
+      max: 24,
+      windowMs: 60 * 1000,
+      cooldownMs: 300,
+      cooldownMessage: "Please pause briefly before searching again.",
+      limitMessage: "Address suggestions are temporarily paused. Please wait about a minute and try again."
+    },
+    routeLookup: {
+      key: "yd_taxi_rate_route_lookup",
+      max: 8,
+      windowMs: 60 * 1000,
+      cooldownMs: 2500,
+      cooldownMessage: "Please wait a moment before checking another route distance.",
+      limitMessage: "Too many distance checks in a short time. Please wait about a minute and try again."
+    },
+    estimateAction: {
+      key: "yd_taxi_rate_estimate_action",
+      max: 10,
+      windowMs: 60 * 1000,
+      cooldownMs: 1200,
+      cooldownMessage: "Please wait a moment before recalculating the fare.",
+      limitMessage: "Fare checks are temporarily paused. Please wait about a minute and try again."
+    },
+    bookingAction: {
+      key: "yd_taxi_rate_booking_action",
+      max: 4,
+      windowMs: 60 * 1000,
+      cooldownMs: 5000,
+      cooldownMessage: "Please wait a few seconds before sending another booking.",
+      limitMessage: "Too many booking sends in a short time. Please wait about a minute and try again."
+    }
+  };
 
   const state = {
     tripType: "oneway",
     estimate: null,
     pickupPlace: null,
     dropPlace: null,
+    autocompleteService: null,
+    placesService: null,
+    sessionToken: null,
+    predictionTimers: {
+      pickup: null,
+      drop: null
+    },
+    predictionRequestIds: {
+      pickup: 0,
+      drop: 0
+    },
     mapsReady: false,
-    mapsRequested: false
+    mapsRequested: false,
+    memoryRateLimits: {}
   };
 
   const form = document.getElementById("bookingForm");
@@ -62,6 +108,10 @@
     passengers: document.getElementById("passengers"),
     luggage: document.getElementById("luggage"),
     notes: document.getElementById("notes")
+  };
+  const suggestionLists = {
+    pickup: document.getElementById("pickupSuggestions"),
+    drop: document.getElementById("dropSuggestions")
   };
 
   function init() {
@@ -121,6 +171,13 @@
       });
     });
 
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest(".autocomplete-shell")) {
+        closeSuggestionList("pickup");
+        closeSuggestionList("drop");
+      }
+    });
+
     fields.cabType.addEventListener("change", function () {
       updateCabCapacity();
       invalidateEstimate();
@@ -142,6 +199,12 @@
     });
 
     document.getElementById("estimateButton").addEventListener("click", function () {
+      const estimateCheck = consumeRateLimit("estimateAction");
+      if (!estimateCheck.allowed) {
+        showStatus(estimateCheck.message, "error");
+        return;
+      }
+
       const result = calculateEstimate({ showErrors: true });
       if (result) {
         showStatus("Fare estimated successfully. Review the summary before sending to WhatsApp.", "success");
@@ -150,6 +213,12 @@
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
+      const bookingCheck = consumeRateLimit("bookingAction");
+      if (!bookingCheck.allowed) {
+        showStatus(bookingCheck.message, "error");
+        return;
+      }
+
       const result = calculateEstimate({ showErrors: true });
       if (!result) {
         showStatus("Please fix the form errors before sending the booking.", "error");
@@ -230,7 +299,7 @@
 
   function maybeLoadGoogleMaps() {
     const key = String(config.googleMapsApiKey || "").trim();
-    const enabled = Boolean(config.enableMapsAutocomplete && key);
+    const enabled = Boolean(key && config.enableMapsAutocomplete !== false);
 
     if (!enabled) {
       mapsStatus.textContent = "Manual distance entry enabled";
@@ -239,14 +308,26 @@
       return;
     }
 
+    if (window.location.protocol === "file:") {
+      mapsStatus.textContent = "Serve over localhost for suggestions";
+      distanceHelp.textContent = "If suggestions do not appear, open the site through http://localhost or your live domain because Google API keys usually block file:// pages.";
+    }
+
     if (state.mapsRequested) {
       return;
     }
 
     state.mapsRequested = true;
     mapsStatus.textContent = "Loading Google Maps";
+    const mapsLoadTimeout = window.setTimeout(function () {
+      if (!state.mapsReady) {
+        mapsStatus.textContent = "Check Google API settings";
+        distanceHelp.textContent = "Make sure billing is enabled and that Maps JavaScript API, Places API, and Directions API are allowed for http://localhost and your live domain.";
+      }
+    }, 7000);
 
     window.__ydTaxiInitMaps = function () {
+      window.clearTimeout(mapsLoadTimeout);
       state.mapsReady = true;
       setupAutocomplete();
       mapsStatus.textContent = "Maps autocomplete enabled";
@@ -258,6 +339,7 @@
     script.async = true;
     script.defer = true;
     script.onerror = function () {
+      window.clearTimeout(mapsLoadTimeout);
       mapsStatus.textContent = "Maps failed to load";
       distanceHelp.textContent = "Route lookup is unavailable right now, so you can still enter the distance manually.";
       fields.distance.readOnly = false;
@@ -271,44 +353,240 @@
       return;
     }
 
-    const pickupAutocomplete = new google.maps.places.Autocomplete(fields.pickup, {
-      fields: ["formatted_address", "geometry", "name"]
-    });
-    const dropAutocomplete = new google.maps.places.Autocomplete(fields.drop, {
-      fields: ["formatted_address", "geometry", "name"]
-    });
+    state.autocompleteService = new google.maps.places.AutocompleteService();
+    state.sessionToken = typeof google.maps.places.AutocompleteSessionToken === "function"
+      ? new google.maps.places.AutocompleteSessionToken()
+      : null;
 
-    pickupAutocomplete.addListener("place_changed", function () {
-      const place = pickupAutocomplete.getPlace();
-      state.pickupPlace = place && place.geometry ? place : null;
-      if (state.pickupPlace) {
-        fields.pickup.value = place.formatted_address || place.name || fields.pickup.value;
+    if (typeof google.maps.places.PlacesService === "function") {
+      state.placesService = new google.maps.places.PlacesService(document.createElement("div"));
+    }
+
+    ["pickup", "drop"].forEach(function (fieldName) {
+      fields[fieldName].addEventListener("input", function () {
+        resetSelectedPlace(fieldName);
+        scheduleSuggestionLookup(fieldName);
+      });
+
+      fields[fieldName].addEventListener("focus", function () {
+        if (fields[fieldName].value.trim().length >= 2) {
+          scheduleSuggestionLookup(fieldName, { immediate: true });
+        }
+      });
+    });
+  }
+
+  function scheduleSuggestionLookup(fieldName, options) {
+    const immediate = options && options.immediate;
+    const value = fields[fieldName].value.trim();
+
+    window.clearTimeout(state.predictionTimers[fieldName]);
+
+    if (!state.mapsReady || !state.autocompleteService || value.length < 2) {
+      closeSuggestionList(fieldName);
+      return;
+    }
+
+    const runLookup = function () {
+      requestSuggestions(fieldName, value);
+    };
+
+    if (immediate) {
+      runLookup();
+      return;
+    }
+
+    state.predictionTimers[fieldName] = window.setTimeout(runLookup, 220);
+  }
+
+  function requestSuggestions(fieldName, inputText) {
+    const rateCheck = consumeRateLimit("suggestionLookup");
+    if (!rateCheck.allowed) {
+      renderSuggestionState(fieldName, rateCheck.message);
+      return;
+    }
+
+    state.predictionRequestIds[fieldName] += 1;
+    const requestId = state.predictionRequestIds[fieldName];
+
+    state.autocompleteService.getPlacePredictions(
+      {
+        input: inputText,
+        sessionToken: state.sessionToken || undefined
+      },
+      function (predictions, status) {
+        if (requestId !== state.predictionRequestIds[fieldName]) {
+          return;
+        }
+
+        if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS || !predictions || predictions.length === 0) {
+          renderSuggestionState(fieldName, "No matching places found.");
+          return;
+        }
+
+        if (status !== google.maps.places.PlacesServiceStatus.OK) {
+          renderSuggestionState(fieldName, "Suggestions are unavailable right now.");
+          return;
+        }
+
+        renderSuggestions(fieldName, predictions);
       }
-      maybeCalculateDistanceFromMaps();
+    );
+  }
+
+  function renderSuggestions(fieldName, predictions) {
+    const list = suggestionLists[fieldName];
+    if (!list) {
+      return;
+    }
+
+    closeSuggestionList(fieldName === "pickup" ? "drop" : "pickup");
+    list.innerHTML = "";
+    predictions.slice(0, 5).forEach(function (prediction) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "autocomplete-item";
+      button.setAttribute("role", "option");
+      button.innerHTML = `
+        <span class="autocomplete-main">${escapeHtml(prediction.structured_formatting.main_text || prediction.description)}</span>
+        <span class="autocomplete-secondary">${escapeHtml(prediction.description)}</span>
+      `;
+      button.addEventListener("click", function () {
+        selectPrediction(fieldName, prediction);
+      });
+      list.appendChild(button);
     });
 
-    dropAutocomplete.addListener("place_changed", function () {
-      const place = dropAutocomplete.getPlace();
-      state.dropPlace = place && place.geometry ? place : null;
-      if (state.dropPlace) {
-        fields.drop.value = place.formatted_address || place.name || fields.drop.value;
+    list.classList.add("is-open");
+  }
+
+  function renderSuggestionState(fieldName, message) {
+    const list = suggestionLists[fieldName];
+    if (!list) {
+      return;
+    }
+
+    list.innerHTML = `<div class="autocomplete-empty">${escapeHtml(message)}</div>`;
+    list.classList.add("is-open");
+  }
+
+  async function selectPrediction(fieldName, prediction) {
+    closeSuggestionList(fieldName);
+    mapsStatus.textContent = fieldName === "pickup" ? "Loading pickup details" : "Loading destination details";
+
+    try {
+      const place = await fetchPlaceDetails(prediction);
+      const displayValue = place.formatted_address || prediction.description || fields[fieldName].value;
+
+      fields[fieldName].value = displayValue;
+      if (fieldName === "pickup") {
+        state.pickupPlace = place;
+        mapsStatus.textContent = "Pickup selected";
+      } else {
+        state.dropPlace = place;
+        mapsStatus.textContent = "Destination selected";
       }
-      maybeCalculateDistanceFromMaps();
-    });
 
-    fields.pickup.addEventListener("input", function () {
+      clearFieldError(fieldName);
+
+      if (typeof google.maps.places.AutocompleteSessionToken === "function") {
+        state.sessionToken = new google.maps.places.AutocompleteSessionToken();
+      }
+
+      maybeCalculateDistanceFromMaps();
+    } catch (error) {
+      mapsStatus.textContent = "Place details unavailable";
+      distanceHelp.textContent = "Suggestions loaded, but place details could not be completed. You can still type the distance manually.";
+      fields.distance.readOnly = false;
+    }
+  }
+
+  async function fetchPlaceDetails(prediction) {
+    if (google.maps.places && typeof google.maps.places.Place === "function") {
+      try {
+        const place = new google.maps.places.Place({
+          id: prediction.place_id
+        });
+        await place.fetchFields({
+          fields: ["formattedAddress", "location"]
+        });
+
+        if (!place.location) {
+          throw new Error("Missing place location");
+        }
+
+        return {
+          geometry: { location: place.location },
+          formatted_address: place.formattedAddress || prediction.description,
+          name: prediction.structured_formatting && prediction.structured_formatting.main_text
+            ? prediction.structured_formatting.main_text
+            : prediction.description
+        };
+      } catch (error) {
+        // Fall back to PlacesService below when the new Place API is unavailable or blocked.
+      }
+    }
+
+    if (!state.placesService) {
+      throw new Error("Places service unavailable");
+    }
+
+    return new Promise(function (resolve, reject) {
+      state.placesService.getDetails(
+        {
+          placeId: prediction.place_id,
+          fields: ["formatted_address", "geometry", "name"]
+        },
+        function (place, status) {
+          if (status !== google.maps.places.PlacesServiceStatus.OK || !place || !place.geometry) {
+            reject(new Error("Failed to fetch place details"));
+            return;
+          }
+
+          resolve({
+            geometry: place.geometry,
+            formatted_address: place.formatted_address || prediction.description,
+            name: place.name || prediction.description
+          });
+        }
+      );
+    });
+  }
+
+  function resetSelectedPlace(fieldName) {
+    if (fieldName === "pickup") {
       state.pickupPlace = null;
-      fields.distance.readOnly = false;
-    });
-
-    fields.drop.addEventListener("input", function () {
+    } else {
       state.dropPlace = null;
-      fields.distance.readOnly = false;
-    });
+    }
+
+    fields.distance.readOnly = false;
+    if (state.mapsReady) {
+      mapsStatus.textContent = "Search for a location";
+      distanceHelp.textContent = "Choose a pickup and destination from the suggestions to auto-calculate distance.";
+    }
+    invalidateEstimate();
+  }
+
+  function closeSuggestionList(fieldName) {
+    const list = suggestionLists[fieldName];
+    if (!list) {
+      return;
+    }
+
+    list.classList.remove("is-open");
+    list.innerHTML = "";
   }
 
   function maybeCalculateDistanceFromMaps() {
     if (!state.mapsReady || !state.pickupPlace || !state.dropPlace) {
+      return;
+    }
+
+    const routeCheck = consumeRateLimit("routeLookup");
+    if (!routeCheck.allowed) {
+      mapsStatus.textContent = "Route lookup paused";
+      distanceHelp.textContent = routeCheck.message;
       return;
     }
 
@@ -331,6 +609,7 @@
         fields.distance.value = kilometers;
         fields.distance.readOnly = true;
         mapsStatus.textContent = "Distance auto-calculated";
+        distanceHelp.textContent = "Distance is auto-calculated after you select both locations from the suggestions.";
         clearFieldError("distance");
         invalidateEstimate();
       }
@@ -564,6 +843,72 @@
     return `YD-${Date.now().toString(36).toUpperCase()}`;
   }
 
+  function consumeRateLimit(name, options) {
+    const settings = rateLimitRules[name];
+    const silent = options && options.silent;
+
+    if (!settings) {
+      return { allowed: true, message: "" };
+    }
+
+    const now = Date.now();
+    const record = loadRateLimitRecord(settings.key);
+    const timestamps = record.timestamps.filter((timestamp) => now - timestamp < settings.windowMs);
+    const lastAt = record.lastAt || 0;
+
+    if (settings.cooldownMs && now - lastAt < settings.cooldownMs) {
+      const waitSeconds = Math.ceil((settings.cooldownMs - (now - lastAt)) / 1000);
+      const message = `${settings.cooldownMessage} Try again in ${waitSeconds}s.`;
+      if (!silent) {
+        saveRateLimitRecord(settings.key, { timestamps, lastAt });
+      }
+      return { allowed: false, message };
+    }
+
+    if (timestamps.length >= settings.max) {
+      const oldest = timestamps[0];
+      const waitSeconds = Math.ceil((settings.windowMs - (now - oldest)) / 1000);
+      const message = `${settings.limitMessage} Try again in ${waitSeconds}s.`;
+      if (!silent) {
+        saveRateLimitRecord(settings.key, { timestamps, lastAt });
+      }
+      return { allowed: false, message };
+    }
+
+    timestamps.push(now);
+    saveRateLimitRecord(settings.key, { timestamps, lastAt: now });
+    return { allowed: true, message: "" };
+  }
+
+  function loadRateLimitRecord(storageKey) {
+    const fallback = state.memoryRateLimits[storageKey] || { timestamps: [], lastAt: 0 };
+
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) {
+        return fallback;
+      }
+
+      const parsed = JSON.parse(raw);
+      return {
+        timestamps: Array.isArray(parsed.timestamps) ? parsed.timestamps : [],
+        lastAt: Number(parsed.lastAt) || 0
+      };
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function saveRateLimitRecord(storageKey, record) {
+    state.memoryRateLimits[storageKey] = record;
+
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(record));
+    } catch (error) {
+      // Ignore localStorage failures and keep the in-memory fallback.
+    }
+  }
+
   function showStatus(message, type) {
     statusBanner.textContent = message;
     statusBanner.className = `status-banner is-visible ${type === "success" ? "is-success" : "is-error"}`;
@@ -620,6 +965,15 @@
       return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
     }
     return value;
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function initReveal() {

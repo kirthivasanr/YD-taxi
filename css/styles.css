@@ -414,6 +414,10 @@ button {
   min-width: 0;
 }
 
+.autocomplete-shell {
+  position: relative;
+}
+
 .field label {
   display: block;
   margin-bottom: 8px;
@@ -452,6 +456,64 @@ button {
 .field textarea {
   resize: vertical;
   min-height: 110px;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: none;
+  z-index: 12;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid rgba(29, 34, 48, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 38px rgba(29, 34, 48, 0.14);
+}
+
+.autocomplete-list.is-open {
+  display: block;
+}
+
+.autocomplete-item {
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid rgba(29, 34, 48, 0.08);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: 0;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item:focus-visible {
+  background: rgba(245, 180, 0, 0.1);
+  outline: none;
+}
+
+.autocomplete-main {
+  display: block;
+  font-weight: 800;
+}
+
+.autocomplete-secondary {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.autocomplete-empty {
+  padding: 12px 14px;
+  color: var(--text-soft);
+  font-size: 0.88rem;
 }
 
 .phone-group {

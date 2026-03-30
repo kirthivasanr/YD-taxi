@@ -6,5 +6,5 @@ window.YD_TAXI_CONFIG = {
   phoneNumber: "+919080609081",
   contactEmail: "support@ydtaxi.example",
   googleMapsApiKey: "AIzaSyCGXDFH4ZuXHD57bIo9t8a6HacWBGHhSuo",
-  enableMapsAutocomplete: false
+  enableMapsAutocomplete: true
 };
